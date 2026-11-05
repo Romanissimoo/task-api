@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import asyncio
 
 app = FastAPI(title='Task Manager')
@@ -7,6 +7,12 @@ app = FastAPI(title='Task Manager')
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(default='', max_length=2000)
+    @field_validator('title')
+    @classmethod
+    def title_no_white_space_before(cls, v: str) -> str:
+        if v != v.lstrip():
+            raise ValueError('title must not start with whitespace')
+        return v
 
 class Task(BaseModel):
     id: int
@@ -28,6 +34,11 @@ async def health():
 
 @app.post('/tasks', response_model=Task)
 async def create_task(payload: TaskCreate):
+    if len(tasks) >= 100:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Репозиторий переполнен. Нельзя создать более 100 задач."
+        )    
     global next_id
     task = Task(
         id = next_id,
@@ -40,7 +51,9 @@ async def create_task(payload: TaskCreate):
     return task
 
 @app.get('/tasks', response_model=list[Task])
-async def list_tasks():
+async def list_tasks(done_only: bool = False):
+    if done_only:
+        return [task for task in tasks.values() if task.done]
     return list(tasks.values())
 
 @app.get('/tasks/{task_id}', response_model= Task)
