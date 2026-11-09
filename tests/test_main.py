@@ -2,7 +2,7 @@ import pytest
 
 from httpx import ASGITransport, AsyncClient
 
-from main import app
+from app.main import app
 
 async def test_health(client):
     response = await client.get('/health')
