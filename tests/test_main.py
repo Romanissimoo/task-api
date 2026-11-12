@@ -6,7 +6,7 @@ from app.main import app
 
 async def test_health(client):
     response = await client.get('/health')
-    assert response.status_code == 500
+    assert response.status_code == 200
     assert response.json() == {'status': 'ok'}
 
 async def test_create_task(client):
